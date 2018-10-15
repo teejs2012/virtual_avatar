@@ -1,4 +1,6 @@
 /data
-/data.zip
+/pre_trained_VGG19_model_path
+/project_name_results
 *.pth
 *.pkl
+*.zip

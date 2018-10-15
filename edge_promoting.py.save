@@ -13,9 +13,7 @@ def edge_promoting(root, save):
     n = 1
     for folder in tqdm(folder_list):
         folder_name = os.path.join(root,folder)
-        for f in os.listdir(folder_name):
-            if not (('png' in f) or ('jpg' in f)):
-                continue           
+        for f in os.listdir(fold
             rgb_img = cv2.imread(os.path.join(folder_name, f))
             gray_img = cv2.imread(os.path.join(folder_name, f), 0)
             rgb_img = cv2.resize(rgb_img, (256, 256))
@@ -34,4 +32,4 @@ def edge_promoting(root, save):
             result = np.concatenate((rgb_img, gauss_img), 1)
 
             cv2.imwrite(os.path.join(save, str(n) + '.png'), result)
-            n += 1
+            n += 1	

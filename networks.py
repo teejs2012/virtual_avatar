@@ -32,6 +32,7 @@ class generator(nn.Module):
         self.nf = nf
         self.nb = nb
         self.down_convs = nn.Sequential(
+            #nn.Conv2d(in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=True)
             nn.Conv2d(in_nc, nf, 7, 1, 3),
             nn.InstanceNorm2d(nf),
             nn.ReLU(True),

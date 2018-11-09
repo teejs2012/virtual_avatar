@@ -1,9 +1,6 @@
-# pytorch-CartoonGAN
-Pytorch implementation of CartoonGAN [1] (CVPR 2018)
- * Parameters without information in the paper were set arbitrarily.
- * I used face-cropped celebA (src) and anime (tgt) collected from the web data because I could not find the author's data.
- 
-
+# pytorch implementation for CartoonGAN and CycleGAN for avatar project
+the CartoonGAN follows this [project](https://github.com/znxlwm/pytorch-CartoonGAN)
+the CycleGAN uses the vanilla cycleGAN [project](https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix) with some minor tweaks
 
 ### Folder structure
 The following shows data folder structure.
@@ -25,8 +22,8 @@ The training data needs to be downloaded from this link and place inside the dat
 put the model under pre_trained_VGG19_model_path folder
 ### 2.Run CartoonGAN.ipynb
 
-## Usage for CartoonGAN
-### Run CycleGAN.ipynb
+## Usage for CycleGAN
+### 1.Run CycleGAN.ipynb
 
 ## Development Environment
 

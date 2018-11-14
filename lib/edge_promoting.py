@@ -2,18 +2,13 @@ import cv2, os
 import numpy as np
 from tqdm import tqdm
 
-def edge_promoting(root, save):
-    folder_list = os.listdir(root)
-    if not os.path.isdir(save):
-        os.makedirs(save)
-    kernel_size = 5
-    kernel = np.ones((kernel_size, kernel_size), np.uint8)
-    gauss = cv2.getGaussianKernel(kernel_size, 0)
-    gauss = gauss * gauss.transpose(1, 0)
-    n = 1
-    for folder in tqdm(folder_list):
-        folder_name = os.path.join(root,folder)
-        for f in os.listdir(folder_name):
+def do_edge_promoting_in_folder(kernel_size, kernel, gauss, img_ind, folder_name, save):
+    cur_img_ind = img_ind
+    file_list = os.listdir(folder_name)
+    for f in tqdm(file_list):
+        if os.path.isdir(f):
+            cur_img_ind = do_edge_promoting_in_folder(kernel_size, kernel, gauss, cur_img_ind,os.path.join(folder_name,f),save)
+        else: 
             if not (('png' in f) or ('jpg' in f)):
                 continue           
             rgb_img = cv2.imread(os.path.join(folder_name, f))
@@ -33,5 +28,16 @@ def edge_promoting(root, save):
 
             result = np.concatenate((rgb_img, gauss_img), 1)
 
-            cv2.imwrite(os.path.join(save, str(n) + '.png'), result)
-            n += 1
+            cv2.imwrite(os.path.join(save, str(cur_img_ind) + '.png'), result)
+            cur_img_ind += 1
+    return cur_img_ind
+
+def edge_promoting(root, save):
+    if not os.path.isdir(save):
+        os.makedirs(save)
+    kernel_size = 5
+    kernel = np.ones((kernel_size, kernel_size), np.uint8)
+    gauss = cv2.getGaussianKernel(kernel_size, 0)
+    gauss = gauss * gauss.transpose(1, 0)
+    n = 1
+    do_edge_promoting_in_folder(kernel_size, kernel, gauss, n, root, save)

@@ -23,6 +23,114 @@ class resnet_block(nn.Module):
 
         return input + x
 
+class latent_classifier(nn.Module):
+    def __init__(self):
+        super(latent_classifier,self).__init__()
+        self.classifier = nn.Linear(1024,2)
+    
+    def forward(self,input):
+        return self.classifier(input)
+
+class xgan_generator(nn.Module):
+    def __init__(self):
+        super(xgan_generator,self).__init__()
+        #input 128*128*3
+        self.conv_s2t = nn.Sequential(
+                nn.Conv2d(3,16,3,2,1),
+                nn.InstanceNorm2d(16),
+                nn.ReLU(True), #64*64*16
+                nn.Conv2d(16,32,3,2,1),
+                nn.InstanceNorm2d(32),
+                nn.ReLU(True), #32*32*32
+                nn.Conv2d(32,64,3,2,1),
+                nn.InstanceNorm2d(64),
+                nn.ReLU(True) #16*16*64
+            )
+        self.conv_t2s = nn.Sequential(
+                nn.Conv2d(3,16,3,2,1),
+                nn.InstanceNorm2d(16),
+                nn.ReLU(True), #64*64*16
+                nn.Conv2d(16,32,3,2,1),
+                nn.InstanceNorm2d(32),
+                nn.ReLU(True), #32*32*32
+                nn.Conv2d(32,64,3,2,1),
+                nn.InstanceNorm2d(64),
+                nn.ReLU(True) #16*16*64
+            )
+        self.conv_sharing = nn.Sequential(
+                nn.Conv2d(64,128,3,2,1),
+                nn.InstanceNorm2d(128),
+                nn.ReLU(True), #8*8*128
+                nn.Conv2d(128,256,3,2,1),
+                nn.InstanceNorm2d(256),
+                nn.ReLU(True) #4*4*256                
+            )
+        self.fc_sharing = nn.Sequential(
+                nn.Linear(4*4*256,1*1*1024), 
+                nn.Linear(1*1*1024,1*1*1024)
+            )
+        self.deconv_sharing = nn.Sequential(
+                nn.Upsample(scale_factor=4),
+                nn.Conv2d(1024,512,3,1,1),
+                nn.InstanceNorm2d(512),
+                nn.ReLU(True), #4*4*512
+                nn.ConvTranspose2d(512,256,4,2,1),
+                nn.InstanceNorm2d(256),
+                nn.ReLU(True) #8*8*256                
+            )
+        self.deconv_s2t = nn.Sequential(
+                nn.ConvTranspose2d(256,128,4,2,1),
+                nn.InstanceNorm2d(128),
+                nn.ReLU(True), #16*16*128
+                nn.ConvTranspose2d(128,64,4,2,1),
+                nn.InstanceNorm2d(64),
+                nn.ReLU(True) #32*32*64   
+                nn.ConvTranspose2d(64,32,4,2,1),
+                nn.InstanceNorm2d(32),
+                nn.ReLU(True) #64*64*32   
+                nn.ConvTranspose2d(32,16,4,2,1),#128*128*16
+                nn.Conv2d(16,3,3,1,1), #128*128*3
+                nn.Tanh(), 
+            )
+        self.deconv_t2s = nn.Sequential(
+                nn.ConvTranspose2d(256,128,4,2,1),
+                nn.InstanceNorm2d(128),
+                nn.ReLU(True), #16*16*128
+                nn.ConvTranspose2d(128,64,4,2,1),
+                nn.InstanceNorm2d(64),
+                nn.ReLU(True) #32*32*64   
+                nn.ConvTranspose2d(64,32,4,2,1),
+                nn.InstanceNorm2d(32),
+                nn.ReLU(True) #64*64*32   
+                nn.ConvTranspose2d(32,16,4,2,1),#128*128*16
+                nn.Conv2d(16,3,3,1,1), #128*128*3
+                nn.Tanh(), 
+            )
+        utils.initialize_weights(self)
+
+    def enc_s2t(self,input):
+        x = self.conv_sharing(self.conv_s2t(input))
+        x = x.reshape(x.shape[0],-1)
+        out = self.fc_sharing(x)
+        return out
+
+    def enc_t2s(self,input):
+        x = self.conv_sharing(self.conv_t2s(input))
+        x = x.reshape(x.shape[0],-1)
+        out = self.fc_sharing(x)
+        return out        
+
+    def dec_s2t(self,input):
+        x = input.reshape(input.shape[0],1,1,-1)
+        x = self.deconv_sharing(x)
+        out = self.deconv_s2t(x)
+        return out
+
+    def dec_t2s(self,input):
+        x = input.reshape(input.shape[0],1,1,-1)
+        x = self.deconv_sharing(x)
+        out = self.deconv_t2s(x)
+        return out
 
 class generator(nn.Module):
     # initializers

@@ -23,88 +23,88 @@ class resnet_block(nn.Module):
 
         return input + x
 
-class latent_classifier(nn.Module):
-    def __init__(self):
+class xgan_classifier(nn.Module):
+    def __init__(self, latent_len=1024,num_class=2):
         super(latent_classifier,self).__init__()
-        self.classifier = nn.Linear(1024,2)
+        self.classifier = nn.Linear(latent_len,num_class)
     
     def forward(self,input):
         return self.classifier(input)
 
 class xgan_generator(nn.Module):
-    def __init__(self):
+    def __init__(self, in_nc, out_nc, nf=16, fcn=1024):
         super(xgan_generator,self).__init__()
         #input 128*128*3
         self.conv_s2t = nn.Sequential(
-                nn.Conv2d(3,16,3,2,1),
-                nn.InstanceNorm2d(16),
-                nn.ReLU(True), #64*64*16
-                nn.Conv2d(16,32,3,2,1),
-                nn.InstanceNorm2d(32),
-                nn.ReLU(True), #32*32*32
-                nn.Conv2d(32,64,3,2,1),
-                nn.InstanceNorm2d(64),
-                nn.ReLU(True) #16*16*64
+                nn.Conv2d(in_nc,nf,3,2,1),
+                nn.InstanceNorm2d(nf),
+                nn.ReLU(True), #64*64*nf
+                nn.Conv2d(nf,2*nf,3,2,1),
+                nn.InstanceNorm2d(2*nf),
+                nn.ReLU(True), #32*32*2nf
+                nn.Conv2d(2*nf,4*nf,3,2,1),
+                nn.InstanceNorm2d(4*nf),
+                nn.ReLU(True) #16*16*4nf
             )
         self.conv_t2s = nn.Sequential(
-                nn.Conv2d(3,16,3,2,1),
-                nn.InstanceNorm2d(16),
-                nn.ReLU(True), #64*64*16
-                nn.Conv2d(16,32,3,2,1),
-                nn.InstanceNorm2d(32),
-                nn.ReLU(True), #32*32*32
-                nn.Conv2d(32,64,3,2,1),
-                nn.InstanceNorm2d(64),
-                nn.ReLU(True) #16*16*64
+                nn.Conv2d(in_nc,nf,3,2,1),
+                nn.InstanceNorm2d(nf),
+                nn.ReLU(True), #64*64*nf
+                nn.Conv2d(nf,2*nf,3,2,1),
+                nn.InstanceNorm2d(2*nf),
+                nn.ReLU(True), #32*32*2nf
+                nn.Conv2d(2*nf,4*nf,3,2,1),
+                nn.InstanceNorm2d(4*nf),
+                nn.ReLU(True) #16*16*4nf
             )
         self.conv_sharing = nn.Sequential(
-                nn.Conv2d(64,128,3,2,1),
-                nn.InstanceNorm2d(128),
-                nn.ReLU(True), #8*8*128
-                nn.Conv2d(128,256,3,2,1),
-                nn.InstanceNorm2d(256),
-                nn.ReLU(True) #4*4*256                
+                nn.Conv2d(4*nf,8*nf,3,2,1),
+                nn.InstanceNorm2d(8*nf),
+                nn.ReLU(True), #8*8*8nf
+                nn.Conv2d(8*nf,16*nf,3,2,1),
+                nn.InstanceNorm2d(16*nf),
+                nn.ReLU(True) #4*4*16nf               
             )
         self.fc_sharing = nn.Sequential(
-                nn.Linear(4*4*256,1*1*1024), 
-                nn.Linear(1*1*1024,1*1*1024)
+                nn.Linear(4*4*16*nf,1*1*fcn), 
+                nn.Linear(1*1*fcn,1*1*fcn)
             )
         self.deconv_sharing = nn.Sequential(
                 nn.Upsample(scale_factor=4),
-                nn.Conv2d(1024,512,3,1,1),
-                nn.InstanceNorm2d(512),
-                nn.ReLU(True), #4*4*512
-                nn.ConvTranspose2d(512,256,4,2,1),
-                nn.InstanceNorm2d(256),
-                nn.ReLU(True) #8*8*256                
+                nn.Conv2d(fcn,32*nf,3,1,1),
+                nn.InstanceNorm2d(32*nf),
+                nn.ReLU(True), #4*4*32nf
+                nn.ConvTranspose2d(32*nf,16*nf,4,2,1),
+                nn.InstanceNorm2d(16*nf),
+                nn.ReLU(True) #8*8*16nf                
             )
         self.deconv_s2t = nn.Sequential(
-                nn.ConvTranspose2d(256,128,4,2,1),
-                nn.InstanceNorm2d(128),
-                nn.ReLU(True), #16*16*128
-                nn.ConvTranspose2d(128,64,4,2,1),
-                nn.InstanceNorm2d(64),
-                nn.ReLU(True) #32*32*64   
-                nn.ConvTranspose2d(64,32,4,2,1),
-                nn.InstanceNorm2d(32),
-                nn.ReLU(True) #64*64*32   
-                nn.ConvTranspose2d(32,16,4,2,1),#128*128*16
-                nn.Conv2d(16,3,3,1,1), #128*128*3
-                nn.Tanh(), 
+                nn.ConvTranspose2d(16*nf,8*nf,4,2,1),
+                nn.InstanceNorm2d(8*nf),
+                nn.ReLU(True), #16*16*8nf
+                nn.ConvTranspose2d(8*nf,4*nf,4,2,1),
+                nn.InstanceNorm2d(4*nf),
+                nn.ReLU(True), #32*32*4nf   
+                nn.ConvTranspose2d(4*nf,2*nf,4,2,1),
+                nn.InstanceNorm2d(2*nf),
+                nn.ReLU(True), #64*64*2nf   
+                nn.ConvTranspose2d(2*nf,nf,4,2,1),#128*128*nf
+                nn.Conv2d(nf,out_nc,3,1,1), #128*128*out_nc
+                nn.Tanh() 
             )
         self.deconv_t2s = nn.Sequential(
-                nn.ConvTranspose2d(256,128,4,2,1),
-                nn.InstanceNorm2d(128),
-                nn.ReLU(True), #16*16*128
-                nn.ConvTranspose2d(128,64,4,2,1),
-                nn.InstanceNorm2d(64),
-                nn.ReLU(True) #32*32*64   
-                nn.ConvTranspose2d(64,32,4,2,1),
-                nn.InstanceNorm2d(32),
-                nn.ReLU(True) #64*64*32   
-                nn.ConvTranspose2d(32,16,4,2,1),#128*128*16
-                nn.Conv2d(16,3,3,1,1), #128*128*3
-                nn.Tanh(), 
+                nn.ConvTranspose2d(16*nf,8*nf,4,2,1),
+                nn.InstanceNorm2d(8*nf),
+                nn.ReLU(True), #16*16*8nf
+                nn.ConvTranspose2d(8*nf,4*nf,4,2,1),
+                nn.InstanceNorm2d(4*nf),
+                nn.ReLU(True), #32*32*4nf   
+                nn.ConvTranspose2d(4*nf,2*nf,4,2,1),
+                nn.InstanceNorm2d(2*nf),
+                nn.ReLU(True), #64*64*2nf   
+                nn.ConvTranspose2d(2*nf,nf,4,2,1),#128*128*nf
+                nn.Conv2d(nf,out_nc,3,1,1), #128*128*out_nc
+                nn.Tanh() 
             )
         utils.initialize_weights(self)
 
@@ -121,13 +121,13 @@ class xgan_generator(nn.Module):
         return out        
 
     def dec_s2t(self,input):
-        x = input.reshape(input.shape[0],1,1,-1)
+        x = input.reshape(input.shape[0],-1,1,1)
         x = self.deconv_sharing(x)
         out = self.deconv_s2t(x)
         return out
 
     def dec_t2s(self,input):
-        x = input.reshape(input.shape[0],1,1,-1)
+        x = input.reshape(input.shape[0],-1,1,1)
         x = self.deconv_sharing(x)
         out = self.deconv_t2s(x)
         return out

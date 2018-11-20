@@ -25,6 +25,10 @@ put the model under pre_trained_VGG19_model_path folder
 ## Usage for CycleGAN
 * Run CycleGAN.ipynb
 
+## Usage for Pix2Pix (Supervised GAN)
+* Use the photo-manga pair images, the dataset can be downloaded from [here](https://drive.google.com/open?id=1nlx80wxkRyyc3h1lIz3p3M7DAiFIy4ef)
+* Run Pix2Pix.ipynb
+
 ## Development Environment
 
 * NVIDIA Tesla P100

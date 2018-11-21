@@ -27,9 +27,15 @@ class xgan_classifier(nn.Module):
     def __init__(self, latent_len=1024,num_class=2):
         super(xgan_classifier,self).__init__()
         self.classifier = nn.Linear(latent_len,num_class)
-    
+        self.norm = nn.InstanceNorm1d(latent_len)
     def forward(self,input):
-        return self.classifier(input)
+#         x = input.reshape(input.shape[0],1,-1)
+        x = input.view(input.size(0),1,-1)
+        x = self.norm(x)
+#         x = x.reshape(x.shape[0],-1)
+        x = x.view(x.size(0),-1)
+        output = self.classifier(x)
+        return output
 
 class xgan_generator(nn.Module):
     def __init__(self, in_nc, out_nc, nf=16, fcn=1024):
@@ -110,24 +116,30 @@ class xgan_generator(nn.Module):
 
     def enc_s2t(self,input):
         x = self.conv_sharing(self.conv_s2t(input))
-        x = x.reshape(x.shape[0],-1)
+#         x = x.reshape(x.shape[0],-1)
+        x = x.view(x.size(0),-1)
+
         out = self.fc_sharing(x)
         return out
 
     def enc_t2s(self,input):
         x = self.conv_sharing(self.conv_t2s(input))
-        x = x.reshape(x.shape[0],-1)
+#         x = x.reshape(x.shape[0],-1)
+        x = x.view(x.size(0),-1)
+
         out = self.fc_sharing(x)
         return out        
 
     def dec_s2t(self,input):
-        x = input.reshape(input.shape[0],-1,1,1)
+#         x = input.reshape(input.shape[0],-1,1,1)
+        x = input.view(input.size(0),-1,1,1)        
         x = self.deconv_sharing(x)
         out = self.deconv_s2t(x)
         return out
 
     def dec_t2s(self,input):
-        x = input.reshape(input.shape[0],-1,1,1)
+#         x = input.reshape(input.shape[0],-1,1,1)
+        x = input.view(input.size(0),-1,1,1)
         x = self.deconv_sharing(x)
         out = self.deconv_t2s(x)
         return out

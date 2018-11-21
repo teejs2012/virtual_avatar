@@ -23,6 +23,14 @@ class resnet_block(nn.Module):
 
         return input + x
 
+class xgan_classifier2(nn.Module):
+    def __init__(self, latent_len, num_class=2):
+        super(xgan_classifier2,self).__init()
+        self.classifier = nn.Linear(latent_len, num_class)
+    def forward(self, input):
+        x = input.view(input.size(0),-1)
+        return self.classifier(x)
+
 class xgan_classifier(nn.Module):
     def __init__(self, latent_len=1024,num_class=2):
         super(xgan_classifier,self).__init__()
@@ -37,6 +45,67 @@ class xgan_classifier(nn.Module):
         output = self.classifier(x)
         return output
 
+class xgan_generator2(nn.Module):
+    def __init__(self, in_nc, out_nc, nf=16, nb=4, n_downsampling=4):
+        super(xgan_generator2, self).__init__()
+        self.mult = 1
+
+        model_conv_s2t = [nn.Conv2d(in_nc, nf, 7, 1, 3),
+                 nn.InstanceNorm2d(nf),
+                 nn.ReLU(True)]
+        # n_downsampling = 2
+        for i in range(n_downsampling//4*3):
+            model_conv_s2t += [nn.Conv2d(nf*self.mult, nf*self.mult*2, 3, 2, 1),
+                      nn.InstanceNorm2d(nf*self.mult*2),
+                      nn.ReLU(True)]
+            self.mult *= 2
+        self.conv_s2t = nn.Sequential(*model_conv_s2t)
+        model_conv_t2s = model_conv_s2t.copy()
+        self.conv_t2s = nn.Sequential(*model_conv_t2s)
+
+        model_conv_sharing = []
+        for i in range(n_downsampling//4):
+            model_conv_sharing += [nn.Conv2d(nf*self.mult, nf*self.mult*2, 3, 2, 1),
+                      nn.InstanceNorm2d(nf*self.mult*2),
+                      nn.ReLU(True)]
+            self.mult *= 2
+        for i in range(nb//2):
+            model_conv_sharing += [resnet_block(nf * self.mult, 3, 1, 1)]
+        self.conv_sharing = nn.Sequential(*model_conv_sharing)
+
+        model_deconv_sharing = []
+        for i in range(nb//2):
+            model_deconv_sharing += [resnet_block(nf * self.mult, 3, 1, 1)]
+        for i in range(n_downsampling//4):
+            model_deconv_sharing += [nn.ConvTranspose2d(nf * self.mult, nf * self.mult//2, 3, 2, 1),
+                                   nn.InstanceNorm2d(nf * self.mult// 2),
+                                   nn.ReLU(True)]
+            self.mult = self.mult//2
+        self.deconv_sharing = nn.Sequential(*model_deconv_sharing)
+
+        model_deconv_s2t = []
+        for i in range(n_downsampling//4*3):
+            model_deconv_s2t += [nn.ConvTranspose2d(nf * self.mult, nf * self.mult//2, 3, 2, 1),
+                                   nn.InstanceNorm2d(nf * self.mult//2),
+                                   nn.ReLU(True)]
+            self.mult = self.mult//2
+
+        model_deconv_s2t += [nn.Conv2d(nf, out_nc, 7, 1, 3),
+                      nn.Tanh()]
+        self.deconv_s2t = nn.Sequential(*model_deconv_s2t)
+        model_deconv_t2s = model_deconv_s2t.copy()
+        self.deconv_t2s = nn.Sequential(*model_deconv_t2s)
+
+        utils.initialize_weights(self)
+
+    def enc_s2t(self, input):
+        return self.conv_sharing(self.conv_s2t(input))
+    def enc_t2s(self, input):
+        return self.conv_sharing(self.conv_t2s(input))
+    def dec_s2t(self, input):
+        return self.deconv_s2t(self.deconv_sharing(input))
+    def dec_t2s(self, input):
+        return self.deconv_t2s(self.deconv_sharing(input))
 class xgan_generator(nn.Module):
     def __init__(self, in_nc, out_nc, nf=16, fcn=1024):
         super(xgan_generator,self).__init__()

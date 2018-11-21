@@ -77,7 +77,7 @@ class xgan_generator2(nn.Module):
         for i in range(nb//2):
             model_deconv_sharing += [resnet_block(nf * self.mult, 3, 1, 1)]
         for i in range(n_downsampling//4):
-            model_deconv_sharing += [nn.ConvTranspose2d(nf * self.mult, nf * self.mult//2, 3, 2, 1),
+            model_deconv_sharing += [nn.ConvTranspose2d(nf * self.mult, nf * self.mult//2, 4, 2, 1),
                                    nn.InstanceNorm2d(nf * self.mult// 2),
                                    nn.ReLU(True)]
             self.mult = self.mult//2
@@ -85,7 +85,7 @@ class xgan_generator2(nn.Module):
 
         model_deconv_s2t = []
         for i in range(n_downsampling//4*3):
-            model_deconv_s2t += [nn.ConvTranspose2d(nf * self.mult, nf * self.mult//2, 3, 2, 1),
+            model_deconv_s2t += [nn.ConvTranspose2d(nf * self.mult, nf * self.mult//2, 4, 2, 1),
                                    nn.InstanceNorm2d(nf * self.mult//2),
                                    nn.ReLU(True)]
             self.mult = self.mult//2

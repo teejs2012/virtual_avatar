@@ -25,7 +25,7 @@ class resnet_block(nn.Module):
 
 class xgan_classifier2(nn.Module):
     def __init__(self, latent_len, num_class=2):
-        super(xgan_classifier2,self).__init()
+        super(xgan_classifier2,self).__init__()
         self.classifier = nn.Linear(latent_len, num_class)
     def forward(self, input):
         x = input.view(input.size(0),-1)

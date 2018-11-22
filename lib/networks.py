@@ -47,7 +47,7 @@ class xgan_classifier(nn.Module):
 
 
 class xgan_generator3(nn.Module):
-    def __init__(self, in_nc, out_nc, nf=8, input_size=128, n_downsampling=7, fc=1024):
+    def __init__(self, in_nc, out_nc, nf=8, input_size=128, coupled_layer=2,decoupled_layer=4, fc=1024):
         super(xgan_generator3, self).__init__()
         
         self.mult = 1
@@ -57,7 +57,7 @@ class xgan_generator3(nn.Module):
         model_conv_t2s = [nn.Conv2d(in_nc, nf, 7, 1, 3),
                  nn.InstanceNorm2d(nf),
                  nn.ReLU(True)]
-        for i in range(n_downsampling-n_downsampling//2):
+        for i in range(decoupled_layer):
             model_conv_s2t += [nn.Conv2d(nf*self.mult, nf*self.mult*2, 3, 2, 1),
                       nn.InstanceNorm2d(nf*self.mult*2),
                       nn.ReLU(True)]
@@ -69,7 +69,7 @@ class xgan_generator3(nn.Module):
         self.conv_t2s = nn.Sequential(*model_conv_t2s)
 
         model_conv_sharing = []
-        for i in range(n_downsampling//2 - 1):
+        for i in range(coupled_layer-1):
             model_conv_sharing += [nn.Conv2d(nf*self.mult, nf*self.mult*2, 3, 2, 1),
                       nn.InstanceNorm2d(nf*self.mult*2),
                       nn.ReLU(True)]
@@ -93,7 +93,7 @@ class xgan_generator3(nn.Module):
 #         )
 
         model_deconv_sharing = []
-        for i in range(n_downsampling//2):
+        for i in range(coupled_layer):
             model_deconv_sharing += [nn.ConvTranspose2d(nf * self.mult, nf * self.mult//2, 4, 2, 1),
                                    nn.InstanceNorm2d(nf * self.mult// 2),
                                    nn.ReLU(True)]
@@ -102,7 +102,7 @@ class xgan_generator3(nn.Module):
         
         model_deconv_s2t = []
         model_deconv_t2s = []
-        for i in range(n_downsampling-n_downsampling//2):
+        for i in range(decoupled_layer):
             model_deconv_s2t += [nn.ConvTranspose2d(nf * self.mult, nf * self.mult//2, 4, 2, 1),
                                    nn.InstanceNorm2d(nf * self.mult//2),
                                    nn.ReLU(True)]

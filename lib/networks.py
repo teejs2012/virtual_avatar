@@ -49,19 +49,23 @@ class xgan_classifier(nn.Module):
 class xgan_generator3(nn.Module):
     def __init__(self, in_nc, out_nc, nf=8, input_size=128, n_downsampling=5, fc=1024):
         super(xgan_generator3, self).__init__()
+        
         self.mult = 1
-
         model_conv_s2t = [nn.Conv2d(in_nc, nf, 7, 1, 3),
                  nn.InstanceNorm2d(nf),
                  nn.ReLU(True)]
-        # n_downsampling = 2
-        for i in range(1-n_downsampling//2):
+        model_conv_t2s = [nn.Conv2d(in_nc, nf, 7, 1, 3),
+                 nn.InstanceNorm2d(nf),
+                 nn.ReLU(True)]
+        for i in range(n_downsampling-n_downsampling//2):
             model_conv_s2t += [nn.Conv2d(nf*self.mult, nf*self.mult*2, 3, 2, 1),
+                      nn.InstanceNorm2d(nf*self.mult*2),
+                      nn.ReLU(True)]
+            model_conv_t2s += [nn.Conv2d(nf*self.mult, nf*self.mult*2, 3, 2, 1),
                       nn.InstanceNorm2d(nf*self.mult*2),
                       nn.ReLU(True)]
             self.mult *= 2
         self.conv_s2t = nn.Sequential(*model_conv_s2t)
-        model_conv_t2s = model_conv_s2t.copy()
         self.conv_t2s = nn.Sequential(*model_conv_t2s)
 
         model_conv_sharing = []
@@ -92,18 +96,22 @@ class xgan_generator3(nn.Module):
                                    nn.ReLU(True)]
             self.mult = self.mult//2
         self.deconv_sharing = nn.Sequential(*model_deconv_sharing)
-
+        
         model_deconv_s2t = []
-        for i in range(1-n_downsampling//2):
+        model_deconv_t2s = []
+        for i in range(n_downsampling-n_downsampling//2):
             model_deconv_s2t += [nn.ConvTranspose2d(nf * self.mult, nf * self.mult//2, 4, 2, 1),
                                    nn.InstanceNorm2d(nf * self.mult//2),
                                    nn.ReLU(True)]
+            model_deconv_t2s += [nn.ConvTranspose2d(nf * self.mult, nf * self.mult//2, 4, 2, 1),
+                                   nn.InstanceNorm2d(nf * self.mult//2),
+                                   nn.ReLU(True)]
             self.mult = self.mult//2
-
         model_deconv_s2t += [nn.Conv2d(nf, out_nc, 7, 1, 3),
                       nn.Tanh()]
+        model_deconv_t2s += [nn.Conv2d(nf, out_nc, 7, 1, 3),
+                      nn.Tanh()]
         self.deconv_s2t = nn.Sequential(*model_deconv_s2t)
-        model_deconv_t2s = model_deconv_s2t.copy()
         self.deconv_t2s = nn.Sequential(*model_deconv_t2s)
 
         utils.initialize_weights(self)
@@ -137,14 +145,20 @@ class xgan_generator2(nn.Module):
         model_conv_s2t = [nn.Conv2d(in_nc, nf, 7, 1, 3),
                  nn.InstanceNorm2d(nf),
                  nn.ReLU(True)]
-        # n_downsampling = 2
+        model_conv_t2s = [nn.Conv2d(in_nc, nf, 7, 1, 3),
+                 nn.InstanceNorm2d(nf),
+                 nn.ReLU(True)]
+        
         for i in range(n_downsampling//4*3):
             model_conv_s2t += [nn.Conv2d(nf*self.mult, nf*self.mult*2, 3, 2, 1),
                       nn.InstanceNorm2d(nf*self.mult*2),
                       nn.ReLU(True)]
+            model_conv_t2s += [nn.Conv2d(nf*self.mult, nf*self.mult*2, 3, 2, 1),
+                      nn.InstanceNorm2d(nf*self.mult*2),
+                      nn.ReLU(True)]
             self.mult *= 2
+        
         self.conv_s2t = nn.Sequential(*model_conv_s2t)
-        model_conv_t2s = model_conv_s2t.copy()
         self.conv_t2s = nn.Sequential(*model_conv_t2s)
 
         model_conv_sharing = []
@@ -168,16 +182,21 @@ class xgan_generator2(nn.Module):
         self.deconv_sharing = nn.Sequential(*model_deconv_sharing)
 
         model_deconv_s2t = []
+        model_deconv_t2s = []
+
         for i in range(n_downsampling//4*3):
             model_deconv_s2t += [nn.ConvTranspose2d(nf * self.mult, nf * self.mult//2, 4, 2, 1),
                                    nn.InstanceNorm2d(nf * self.mult//2),
                                    nn.ReLU(True)]
+            model_deconv_t2s += [nn.ConvTranspose2d(nf * self.mult, nf * self.mult//2, 4, 2, 1),
+                       nn.InstanceNorm2d(nf * self.mult//2),
+                       nn.ReLU(True)]
             self.mult = self.mult//2
-
         model_deconv_s2t += [nn.Conv2d(nf, out_nc, 7, 1, 3),
                       nn.Tanh()]
+        model_deconv_t2s += [nn.Conv2d(nf, out_nc, 7, 1, 3),
+              nn.Tanh()]
         self.deconv_s2t = nn.Sequential(*model_deconv_s2t)
-        model_deconv_t2s = model_deconv_s2t.copy()
         self.deconv_t2s = nn.Sequential(*model_deconv_t2s)
 
         utils.initialize_weights(self)

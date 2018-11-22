@@ -45,6 +45,90 @@ class xgan_classifier(nn.Module):
         output = self.classifier(x)
         return output
 
+
+class xgan_generator3(nn.Module):
+    def __init__(self, in_nc, out_nc, nf=8, input_size=128, n_downsampling=5, fc=1024):
+        super(xgan_generator3, self).__init__()
+        self.mult = 1
+
+        model_conv_s2t = [nn.Conv2d(in_nc, nf, 7, 1, 3),
+                 nn.InstanceNorm2d(nf),
+                 nn.ReLU(True)]
+        # n_downsampling = 2
+        for i in range(1-n_downsampling//2):
+            model_conv_s2t += [nn.Conv2d(nf*self.mult, nf*self.mult*2, 3, 2, 1),
+                      nn.InstanceNorm2d(nf*self.mult*2),
+                      nn.ReLU(True)]
+            self.mult *= 2
+        self.conv_s2t = nn.Sequential(*model_conv_s2t)
+        model_conv_t2s = model_conv_s2t.copy()
+        self.conv_t2s = nn.Sequential(*model_conv_t2s)
+
+        model_conv_sharing = []
+        for i in range(n_downsampling//2):
+            model_conv_sharing += [nn.Conv2d(nf*self.mult, nf*self.mult*2, 3, 2, 1),
+                      nn.InstanceNorm2d(nf*self.mult*2),
+                      nn.ReLU(True)]
+            self.mult *= 2
+        self.conv_sharing = nn.Sequential(*model_conv_sharing)
+
+        self.size_aft_conv = input_size // self.mult
+        self.nf_aft_conv = nf * self.mult
+        self.flattened_dim = self.size_aft_conv * self.size_aft_conv * self.nf_aft_conv
+
+        self.fc_1 = nn.Sequential(
+            nn.Linear(self.flattened_dim, fc),
+            nn.Linear(fc, fc)
+        )
+        self.fc_2 = nn.Sequential(
+            nn.Linear(fc, fc),
+            nn.Linear(fc, self.flattened_dim)
+        )
+
+        model_deconv_sharing = []
+        for i in range(n_downsampling//2):
+            model_deconv_sharing += [nn.ConvTranspose2d(nf * self.mult, nf * self.mult//2, 4, 2, 1),
+                                   nn.InstanceNorm2d(nf * self.mult// 2),
+                                   nn.ReLU(True)]
+            self.mult = self.mult//2
+        self.deconv_sharing = nn.Sequential(*model_deconv_sharing)
+
+        model_deconv_s2t = []
+        for i in range(1-n_downsampling//2):
+            model_deconv_s2t += [nn.ConvTranspose2d(nf * self.mult, nf * self.mult//2, 4, 2, 1),
+                                   nn.InstanceNorm2d(nf * self.mult//2),
+                                   nn.ReLU(True)]
+            self.mult = self.mult//2
+
+        model_deconv_s2t += [nn.Conv2d(nf, out_nc, 7, 1, 3),
+                      nn.Tanh()]
+        self.deconv_s2t = nn.Sequential(*model_deconv_s2t)
+        model_deconv_t2s = model_deconv_s2t.copy()
+        self.deconv_t2s = nn.Sequential(*model_deconv_t2s)
+
+        utils.initialize_weights(self)
+
+    def enc_s2t(self, input):
+        x = self.conv_sharing(self.conv_s2t(input))
+        x = x.view(x.size(0), -1)
+        out = self.fc_1(x)
+        return out
+    def enc_t2s(self, input):
+        x = self.conv_sharing(self.conv_t2s(input))
+        x = x.view(x.size(0), -1)
+        out = self.fc_1(x)
+        return out
+    def dec_s2t(self, input):
+        x = self.fc_2(input)
+        x = x.view(-1,self.nf_aft_conv,self.size_aft_conv, self.size_aft_conv)
+        out = self.deconv_s2t(self.deconv_sharing(x))
+        return out
+    def dec_t2s(self, input):
+        x = self.fc_2(input)
+        x = x.view(-1,self.nf_aft_conv,self.size_aft_conv, self.size_aft_conv)
+        out = self.deconv_t2s(self.deconv_sharing(x))
+        return out
+
 class xgan_generator2(nn.Module):
     def __init__(self, in_nc, out_nc, nf=16, nb=4, n_downsampling=4):
         super(xgan_generator2, self).__init__()

@@ -47,7 +47,7 @@ class xgan_classifier(nn.Module):
 
 
 class xgan_generator3(nn.Module):
-    def __init__(self, in_nc, out_nc, nf=8, input_size=128, n_downsampling=5, fc=1024):
+    def __init__(self, in_nc, out_nc, nf=8, input_size=128, n_downsampling=7, fc=1024):
         super(xgan_generator3, self).__init__()
         
         self.mult = 1
@@ -69,25 +69,28 @@ class xgan_generator3(nn.Module):
         self.conv_t2s = nn.Sequential(*model_conv_t2s)
 
         model_conv_sharing = []
-        for i in range(n_downsampling//2):
+        for i in range(n_downsampling//2 - 1):
             model_conv_sharing += [nn.Conv2d(nf*self.mult, nf*self.mult*2, 3, 2, 1),
                       nn.InstanceNorm2d(nf*self.mult*2),
                       nn.ReLU(True)]
             self.mult *= 2
+        
+        model_conv_sharing += [nn.Conv2d(nf*self.mult, nf*self.mult*2, 3, 2, 1)]
+        self.mult *= 2
         self.conv_sharing = nn.Sequential(*model_conv_sharing)
 
-        self.size_aft_conv = input_size // self.mult
-        self.nf_aft_conv = nf * self.mult
-        self.flattened_dim = self.size_aft_conv * self.size_aft_conv * self.nf_aft_conv
+#         self.size_aft_conv = input_size // self.mult
+#         self.nf_aft_conv = nf * self.mult
+#         self.flattened_dim = self.size_aft_conv * self.size_aft_conv * self.nf_aft_conv
 
-        self.fc_1 = nn.Sequential(
-            nn.Linear(self.flattened_dim, fc),
-            nn.Linear(fc, fc)
-        )
-        self.fc_2 = nn.Sequential(
-            nn.Linear(fc, fc),
-            nn.Linear(fc, self.flattened_dim)
-        )
+#         self.fc_1 = nn.Sequential(
+#             nn.Linear(self.flattened_dim, fc),
+#             nn.Linear(fc, fc)
+#         )
+#         self.fc_2 = nn.Sequential(
+#             nn.Linear(fc, fc),
+#             nn.Linear(fc, self.flattened_dim)
+#         )
 
         model_deconv_sharing = []
         for i in range(n_downsampling//2):
@@ -117,25 +120,25 @@ class xgan_generator3(nn.Module):
         utils.initialize_weights(self)
 
     def enc_s2t(self, input):
-        x = self.conv_sharing(self.conv_s2t(input))
-        x = x.view(x.size(0), -1)
-        out = self.fc_1(x)
-        return out
+#         x = self.conv_sharing(self.conv_s2t(input))
+#         x = x.view(x.size(0), -1)
+#         out = self.fc_1(x)
+        return self.conv_sharing(self.conv_s2t(input))
     def enc_t2s(self, input):
-        x = self.conv_sharing(self.conv_t2s(input))
-        x = x.view(x.size(0), -1)
-        out = self.fc_1(x)
-        return out
+#         x = self.conv_sharing(self.conv_t2s(input))
+#         x = x.view(x.size(0), -1)
+#         out = self.fc_1(x)
+        return self.conv_sharing(self.conv_t2s(input))
     def dec_s2t(self, input):
-        x = self.fc_2(input)
-        x = x.view(-1,self.nf_aft_conv,self.size_aft_conv, self.size_aft_conv)
-        out = self.deconv_s2t(self.deconv_sharing(x))
-        return out
+#         x = self.fc_2(input)
+#         x = x.view(-1,self.nf_aft_conv,self.size_aft_conv, self.size_aft_conv)
+#         out = self.deconv_s2t(self.deconv_sharing(x))
+        return self.deconv_s2t(self.deconv_sharing(input))
     def dec_t2s(self, input):
-        x = self.fc_2(input)
-        x = x.view(-1,self.nf_aft_conv,self.size_aft_conv, self.size_aft_conv)
-        out = self.deconv_t2s(self.deconv_sharing(x))
-        return out
+#         x = self.fc_2(input)
+#         x = x.view(-1,self.nf_aft_conv,self.size_aft_conv, self.size_aft_conv)
+#         out = self.deconv_t2s(self.deconv_sharing(x))
+        return self.deconv_t2s(self.deconv_sharing(input))
 
 class xgan_generator2(nn.Module):
     def __init__(self, in_nc, out_nc, nf=16, nb=4, n_downsampling=4):

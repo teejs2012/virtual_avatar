@@ -413,6 +413,53 @@ class xgan_generator(nn.Module):
         out = self.deconv_t2s(x)
         return out
 
+
+class cyclegan_generator1(nn.Module):
+    def __init__(self, in_nc, out_nc, nf=16, nb=2, n_downsampling = 5):
+        super(cyclegan_generator1, self).__init__()
+        self.input_nc = in_nc
+        self.output_nc = out_nc
+        self.nf = nf
+        self.nb = nb
+        self.mult = 1
+        model_conv = [nn.Conv2d(in_nc, nf, 7, 1, 3),
+                 nn.InstanceNorm2d(nf),
+                 nn.ReLU(True)]
+        for i in range(n_downsampling):
+            model_conv += [nn.Conv2d(nf*self.mult, nf*self.mult*2, 3, 2, 1),
+                      nn.Conv2d(nf*self.mult*2, nf*self.mult*2, 3, 1, 1),
+                      nn.InstanceNorm2d(nf*self.mult*2),
+                      nn.ReLU(True)]
+            self.mult *= 2
+        self.down_convs = nn.Sequential(*model_conv)
+
+        self.resnet_blocks = []
+        for i in range(nb):
+            self.resnet_blocks.append(resnet_block(nf * self.mult, 3, 1, 1))
+        self.resnet_blocks = nn.Sequential(*self.resnet_blocks)
+
+        model_deconv=[]
+        for i in range(n_downsampling):
+            model_deconv += [nn.ConvTranspose2d(nf*self.mult, nf*self.mult//2, 3, 2, 1),
+                      nn.Conv2d(nf*self.mult//2, nf*self.mult//2, 3, 1, 1),
+                      nn.InstanceNorm2d(nf*self.mult//2),
+                      nn.ReLU(True)]
+            self.mult = self.mult//2
+        model_deconv += [nn.Conv2d(nf, out_nc, 7, 1, 3),
+                         nn.Tanh()]
+
+        self.up_convs = nn.Sequential(*model_deconv)
+
+        utils.initialize_weights(self)
+
+    # forward method
+    def forward(self, input):
+        x = self.down_convs(input)
+        x = self.resnet_blocks(x)
+        output = self.up_convs(x)
+
+        return output
+
 class generator(nn.Module):
     # initializers
     def __init__(self, in_nc, out_nc, nf=32, nb=6):

@@ -440,7 +440,7 @@ class cyclegan_generator1(nn.Module):
 
         model_deconv=[]
         for i in range(n_downsampling):
-            model_deconv += [nn.ConvTranspose2d(nf*self.mult, nf*self.mult//2, 3, 2, 1),
+            model_deconv += [nn.ConvTranspose2d(nf*self.mult, nf*self.mult//2, 4, 2, 1),
                       nn.Conv2d(nf*self.mult//2, nf*self.mult//2, 3, 1, 1),
                       nn.InstanceNorm2d(nf*self.mult//2),
                       nn.ReLU(True)]

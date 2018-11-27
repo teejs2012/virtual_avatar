@@ -513,6 +513,28 @@ class generator(nn.Module):
         return output
 
 
+class wgan_discriminator(nn.Module):
+    def __init__(self, in_nc, nf=32, input_dim = 64, n_downsampling = 3):
+        super(wgan_discriminator, self).__init__()
+        self.nf = nf
+        convs_model = [nn.Conv2d(in_nc, nf, 3, 2, 1),
+            nn.ReLU(True)]
+        mult = 1
+        for i in (n_downsampling-1):
+            convs_model += [nn.Conv2d(nf * mult, nf * mult * 2, 3, 2, 1),
+            nn.ReLU(True)]
+            mult *= 2
+        self.convs = nn.Sequential(*convs_model)
+        last_dim = input_dim // mult
+        last_nf = nf * mult
+        self.linear = nn.Linear(8*8*nf*4,1)
+
+    def forward(self,input):
+        out = self.convs(input)
+        out = out.view(-1, 8*8*self.nf*4)
+        out = self.linear(out)
+        return out.view(-1)
+
 class discriminator(nn.Module):
     # initializers
     def __init__(self, in_nc, out_nc, nf=32):

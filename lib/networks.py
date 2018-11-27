@@ -520,7 +520,7 @@ class wgan_discriminator(nn.Module):
         convs_model = [nn.Conv2d(in_nc, nf, 3, 1, 1),
             nn.ReLU(True)]
         mult = 1
-        for i in (n_downsampling):
+        for i in range(n_downsampling):
             convs_model += [nn.Conv2d(nf * mult, nf * mult * 2, 3, 2, 1),
             nn.ReLU(True)]
             mult *= 2

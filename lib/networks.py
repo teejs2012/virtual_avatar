@@ -484,7 +484,7 @@ class xgan_generator(nn.Module):
 
 
 class cyclegan_generator1(nn.Module):
-    def __init__(self, in_nc, out_nc, nf=16, nb=2, n_downsampling = 5):
+    def __init__(self, in_nc, out_nc, nf=16, nb=2, n_downsampling = 5, addtional_conv = False):
         super(cyclegan_generator1, self).__init__()
         self.input_nc = in_nc
         self.output_nc = out_nc
@@ -495,10 +495,15 @@ class cyclegan_generator1(nn.Module):
                  nn.InstanceNorm2d(nf),
                  nn.ReLU(True)]
         for i in range(n_downsampling):
-            model_conv += [nn.Conv2d(nf*self.mult, nf*self.mult*2, 3, 2, 1),
-                      nn.Conv2d(nf*self.mult*2, nf*self.mult*2, 3, 1, 1),
-                      nn.InstanceNorm2d(nf*self.mult*2),
-                      nn.ReLU(True)]
+            if addtional_conv:
+                model_conv += [nn.Conv2d(nf*self.mult, nf*self.mult*2, 3, 2, 1),
+                          nn.Conv2d(nf*self.mult*2, nf*self.mult*2, 3, 1, 1),
+                          nn.InstanceNorm2d(nf*self.mult*2),
+                          nn.ReLU(True)]
+            else:
+                model_conv += [nn.Conv2d(nf*self.mult, nf*self.mult*2, 3, 2, 1),
+                          nn.InstanceNorm2d(nf*self.mult*2),
+                          nn.ReLU(True)]                
             self.mult *= 2
         self.down_convs = nn.Sequential(*model_conv)
 
@@ -509,10 +514,15 @@ class cyclegan_generator1(nn.Module):
 
         model_deconv=[]
         for i in range(n_downsampling):
-            model_deconv += [nn.ConvTranspose2d(nf*self.mult, nf*self.mult//2, 4, 2, 1),
-                      nn.Conv2d(nf*self.mult//2, nf*self.mult//2, 3, 1, 1),
-                      nn.InstanceNorm2d(nf*self.mult//2),
-                      nn.ReLU(True)]
+            if addtional_conv:
+                model_deconv += [nn.ConvTranspose2d(nf*self.mult, nf*self.mult//2, 4, 2, 1),
+                          nn.Conv2d(nf*self.mult//2, nf*self.mult//2, 3, 1, 1),
+                          nn.InstanceNorm2d(nf*self.mult//2),
+                          nn.ReLU(True)]
+            else:
+                model_deconv += [nn.ConvTranspose2d(nf*self.mult, nf*self.mult//2, 4, 2, 1),
+                          nn.InstanceNorm2d(nf*self.mult//2),
+                          nn.ReLU(True)]                
             self.mult = self.mult//2
         model_deconv += [nn.Conv2d(nf, out_nc, 7, 1, 3),
                          nn.Tanh()]
@@ -524,9 +534,9 @@ class cyclegan_generator1(nn.Module):
     # forward method
     def forward(self, input):
         x = self.down_convs(input)
-        x = self.resnet_blocks(x)
+        if(self.nb>0):
+            x = self.resnet_blocks(x)
         output = self.up_convs(x)
-
         return output
 
 class generator(nn.Module):

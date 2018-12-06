@@ -634,7 +634,7 @@ class discriminator(nn.Module):
             nn.Conv2d(nf * 4, nf * 8, 3, 1, 1),
             nn.InstanceNorm2d(nf * 8),
             nn.LeakyReLU(0.2, True),
-            nn.Conv2d(nf * 8, nf * 8, 3, 1, 1),
+            nn.Conv2d(nf * 8, nf * 8, 3, 2, 1),
             nn.InstanceNorm2d(nf * 8),
             nn.LeakyReLU(0.2, True),
             nn.Conv2d(nf * 8, out_nc, 3, 1, 1),

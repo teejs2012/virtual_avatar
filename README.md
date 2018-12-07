@@ -33,8 +33,8 @@ put the model under pre_trained_VGG19_model_path folder
 
 * NVIDIA Tesla P100
 * cuda 8.0
-* python 3.5.3
-* pytorch 0.4.0
+* python 3.5.5
+* pytorch 0.4.1
 * torchvision 0.2.1
-* opencv 3.2.0
+* opencv-python 3.4.3.18
 

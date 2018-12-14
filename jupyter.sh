@@ -1,1 +1,1 @@
-jupyter notebook --no-browser --port=1000 --allow-root
+jupyter notebook --ip 127.0.0.1

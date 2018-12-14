@@ -2,6 +2,7 @@ from lib import utils
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import functools
 
 class resnet_block(nn.Module):
     def __init__(self, channel, kernel, stride, padding):
@@ -614,15 +615,63 @@ class wgan_discriminator(nn.Module):
         out = self.linear(out)
         return out.view(-1)
 
+    
+    
+class pix2pix_discriminator(nn.Module):
+    def __init__(self, input_nc, output_nc, ndf=64, n_layers=3, use_sigmoid=False):
+        super(pix2pix_discriminator, self).__init__()
+#         if type(norm_layer) == functools.partial:
+#             use_bias = norm_layer.func == nn.InstanceNorm2d
+#         else:
+#             use_bias = norm_layer == nn.InstanceNorm2d
+        use_bias=True
+        norm_layer = functools.partial(nn.InstanceNorm2d, affine=False, track_running_stats=False)
+        kw = 4
+        padw = 1
+        sequence = [
+            nn.Conv2d(input_nc, ndf, kernel_size=kw, stride=2, padding=padw),
+            nn.LeakyReLU(0.2, True)
+        ]
+
+        nf_mult = 1
+        nf_mult_prev = 1
+        for n in range(1, n_layers):
+            nf_mult_prev = nf_mult
+            nf_mult = min(2**n, 8)
+            sequence += [
+                nn.Conv2d(ndf * nf_mult_prev, ndf * nf_mult,
+                          kernel_size=kw, stride=2, padding=padw, bias=use_bias),
+                norm_layer(ndf * nf_mult),
+                nn.LeakyReLU(0.2, True)
+            ]
+
+        nf_mult_prev = nf_mult
+        nf_mult = min(2**n_layers, 8)
+        sequence += [
+            nn.Conv2d(ndf * nf_mult_prev, ndf * nf_mult,
+                      kernel_size=kw, stride=1, padding=padw, bias=use_bias),
+            norm_layer(ndf * nf_mult),
+            nn.LeakyReLU(0.2, True)
+        ]
+
+        sequence += [nn.Conv2d(ndf * nf_mult, output_nc, kernel_size=kw, stride=1, padding=padw)]
+
+        if use_sigmoid:
+            sequence += [nn.Sigmoid()]
+
+        self.model = nn.Sequential(*sequence)
+
+    def forward(self, input):
+        return self.model(input)
+    
 class discriminator(nn.Module):
     # initializers
-    def __init__(self, in_nc, out_nc, nf=32):
+    def __init__(self, in_nc, out_nc, nf=32, use_sigmoid=False):
         super(discriminator, self).__init__()
         self.input_nc = in_nc
         self.output_nc = out_nc
         self.nf = nf
-        self.convs = nn.Sequential(
-            nn.Conv2d(in_nc, nf, 3, 1, 1),
+        layers = [nn.Conv2d(in_nc, nf, 3, 1, 1),
             nn.LeakyReLU(0.2, True),
             nn.Conv2d(nf, nf * 2, 3, 2, 1),
             nn.LeakyReLU(0.2, True),
@@ -637,9 +686,30 @@ class discriminator(nn.Module):
             nn.Conv2d(nf * 8, nf * 8, 3, 2, 1),
             nn.InstanceNorm2d(nf * 8),
             nn.LeakyReLU(0.2, True),
-            nn.Conv2d(nf * 8, out_nc, 3, 1, 1),
-            nn.Sigmoid(),
-        )
+            nn.Conv2d(nf * 8, out_nc, 3, 1, 1)]
+        if use_sigmoid:
+            layers.append(nn.Sigmoid())
+            
+        self.convs = nn.Sequential(*layers)
+#         self.convs = nn.Sequential(
+#             nn.Conv2d(in_nc, nf, 3, 1, 1),
+#             nn.LeakyReLU(0.2, True),
+#             nn.Conv2d(nf, nf * 2, 3, 2, 1),
+#             nn.LeakyReLU(0.2, True),
+#             nn.Conv2d(nf * 2, nf * 4, 3, 1, 1),
+#             nn.InstanceNorm2d(nf * 4),
+#             nn.LeakyReLU(0.2, True),
+#             nn.Conv2d(nf * 4, nf * 4, 3, 2, 1),
+#             nn.LeakyReLU(0.2, True),
+#             nn.Conv2d(nf * 4, nf * 8, 3, 1, 1),
+#             nn.InstanceNorm2d(nf * 8),
+#             nn.LeakyReLU(0.2, True),
+#             nn.Conv2d(nf * 8, nf * 8, 3, 2, 1),
+#             nn.InstanceNorm2d(nf * 8),
+#             nn.LeakyReLU(0.2, True),
+#             nn.Conv2d(nf * 8, out_nc, 3, 1, 1)
+# #             nn.Sigmoid(),
+#         )
 
         utils.initialize_weights(self)
 
